@@ -1,0 +1,54 @@
+name: iot_hydrogrow
+description: "HydroGrow - Smart Hydroponics Monitoring & Control System"
+# publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- Firebase Core & Auth ---
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  firebase_database: ^11.0.0
+
+  # --- AI Engine ---
+  google_generative_ai: ^0.4.6 # Diperbarui agar mendukung model Flash terbaru
+
+  # --- State Management ---
+  provider: ^6.1.2
+
+  # --- Charts ---
+  fl_chart: ^0.70.0
+
+  # --- Utils ---
+  intl: ^0.19.0
+  http: ^1.2.2
+  shared_preferences: ^2.3.0
+  url_launcher: ^6.3.0
+  fluttertoast: ^8.2.8
+  flutter_dotenv: ^5.1.0
+  flutter_map: ^7.0.0 # Untuk peta
+  latlong2: ^0.9.1     # Untuk koordinat peta
+  
+  # --- Dokumentasi & Export ---
+  pdf: ^3.10.0
+  printing: ^5.12.0
+  path_provider: ^2.1.3
+
+  # --- UI & Design ---
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  excel: ^4.0.6
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - .env # Pastikan file ini ada di folder paling luar project kamu
