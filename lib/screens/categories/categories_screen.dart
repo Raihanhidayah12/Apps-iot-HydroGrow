@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
+import 'package:intl/intl.dart';
 import '../../core/constants.dart';
 
 // --- 1. MODEL DATA ---
@@ -11,6 +12,8 @@ class PlantCategory {
   final int moistureMin;
   final int moistureMax;
   final int createdAt;
+  final int activeSchedules;
+  final int inactiveSchedules;
 
   PlantCategory({
     required this.key,
@@ -19,9 +22,25 @@ class PlantCategory {
     required this.moistureMin,
     required this.moistureMax,
     required this.createdAt,
+    this.activeSchedules = 0,
+    this.inactiveSchedules = 0,
   });
 
   factory PlantCategory.fromMap(String key, Map data) {
+    int active = 0;
+    int inactive = 0;
+    if (data['schedules'] != null && data['schedules'] is Map) {
+      (data['schedules'] as Map).forEach((k, v) {
+        if (v is Map) {
+          if (v['active'] == true) {
+            active++;
+          } else {
+            inactive++;
+          }
+        }
+      });
+    }
+
     return PlantCategory(
       key: key,
       label: data['label'] ?? '',
@@ -29,6 +48,8 @@ class PlantCategory {
       moistureMin: data['moisture_min'] ?? 40,
       moistureMax: data['moisture_max'] ?? 80,
       createdAt: data['createdAt'] ?? 0,
+      activeSchedules: active,
+      inactiveSchedules: inactive,
     );
   }
 }
@@ -261,12 +282,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
   bool _isLoading = true;
   String _searchTerm = "";
 
-  // Dummy schedule data (replace with real Firebase if needed)
+  // Schedule data from Firebase
   int _activeSchedules = 0;
   int _inactiveSchedules = 0;
+  bool _isPumpActive = false;
 
   late StreamSubscription _typesSub;
   late StreamSubscription _unitsSub;
+  late StreamSubscription _pumpSub;
 
   @override
   void initState() {
@@ -278,13 +301,20 @@ class _CategoriesPageState extends State<CategoriesPage> {
     _typesSub = _dbRef.child("config/plant_types").onValue.listen((event) {
       final data = event.snapshot.value as Map? ?? {};
       List<PlantCategory> temp = [];
+      int totalActive = 0;
+      int totalInactive = 0;
       data.forEach((key, value) {
-        temp.add(PlantCategory.fromMap(key, Map<String, dynamic>.from(value)));
+        final cat = PlantCategory.fromMap(key, Map<String, dynamic>.from(value));
+        temp.add(cat);
+        totalActive += cat.activeSchedules;
+        totalInactive += cat.inactiveSchedules;
       });
       temp.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       if (mounted)
         setState(() {
           _categories = temp;
+          _activeSchedules = totalActive;
+          _inactiveSchedules = totalInactive;
           _isLoading = false;
         });
     });
@@ -301,12 +331,20 @@ class _CategoriesPageState extends State<CategoriesPage> {
       });
       if (mounted) setState(() => _flatUnits = flattened);
     });
+
+    _pumpSub = _dbRef.child("device/control/manualTimer").onValue.listen((event) {
+      final data = event.snapshot.value as Map? ?? {};
+      if (mounted) setState(() {
+        _isPumpActive = data['isActive'] ?? false;
+      });
+    });
   }
 
   @override
   void dispose() {
     _typesSub.cancel();
     _unitsSub.cancel();
+    _pumpSub.cancel();
     super.dispose();
   }
 
@@ -828,12 +866,26 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
                                 const SizedBox(height: 16),
 
-                                // Table Header
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(),
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          minWidth: constraints.maxWidth,
+                                        ),
+                                        child: SizedBox(
+                                          width: constraints.maxWidth < 900 ? 900 : constraints.maxWidth,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              // Table Header
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 10,
+                                                ),
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).brightness == Brightness.dark
                                         ? Colors.white.withOpacity(0.05)
@@ -846,16 +898,19 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                       _tableHeader("KATEGORI", flex: 3),
                                       _tableHeader("TOTAL BOX", flex: 2),
                                       _tableHeader(
-                                        "MIN",
+                                        "MOISTURE MIN",
                                         flex: 2,
                                         color: AppColors.orange,
                                       ),
                                       _tableHeader(
-                                        "MAX",
+                                        "MOISTURE MAX",
                                         flex: 2,
                                         color: AppColors.info,
                                       ),
-                                      const SizedBox(width: 36),
+                                      _tableHeader("SCHEDULES", flex: 2),
+                                      _tableHeader("PUMP STATUS", flex: 2),
+                                      _tableHeader("CREATED AT", flex: 2),
+                                      _tableHeader("ACTION", flex: 2),
                                     ],
                                   ),
                                 ),
@@ -1008,30 +1063,99 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                                     textAlign: TextAlign.center,
                                                   ),
                                                 ),
-                                                // Delete
-                                                GestureDetector(
-                                                  onTap: () =>
-                                                      _confirmDelete(cat),
-                                                  child: Container(
-                                                    width: 32,
-                                                    height: 32,
-                                                    decoration: BoxDecoration(
-                                                      color: boxCount > 0
-                                                          ? Theme.of(context).dividerColor.withOpacity(0.15)
-                                                          : AppColors.red.withOpacity(0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
+                                                // Schedules
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Text(
+                                                    "${cat.activeSchedules} Active",
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: Color(0xFF673AB7),
+                                                    ),
+                                                    textAlign: TextAlign.left,
+                                                  ),
+                                                ),
+                                                // Pump Status
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.power_settings_new_rounded,
+                                                        size: 14,
+                                                        color: _isPumpActive ? Colors.green : Colors.grey[400],
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        _isPumpActive ? "Aktif" : "Mati",
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: _isPumpActive ? Colors.green : Colors.grey[400],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // Created At
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Text(
+                                                    cat.createdAt > 0 
+                                                        ? DateFormat('dd MMM yyyy').format(DateTime.fromMillisecondsSinceEpoch(cat.createdAt))
+                                                        : "-",
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Colors.grey[500],
+                                                    ),
+                                                    textAlign: TextAlign.left,
+                                                  ),
+                                                ),
+                                                // Action
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Row(
+                                                    children: [
+                                                      GestureDetector(
+                                                        onTap: () => _showForm(cat),
+                                                        child: Container(
+                                                          width: 32,
+                                                          height: 32,
+                                                          margin: const EdgeInsets.only(right: 8),
+                                                          decoration: BoxDecoration(
+                                                            color: Theme.of(context).dividerColor.withOpacity(0.05),
+                                                            borderRadius: BorderRadius.circular(8),
                                                           ),
-                                                    ),
-                                                    child: Icon(
-                                                      Icons
-                                                          .delete_outline_rounded,
-                                                      size: 16,
-                                                      color: boxCount > 0
-                                                          ? Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.3)
-                                                          : Colors.redAccent,
-                                                    ),
+                                                          child: Icon(
+                                                            Icons.edit_rounded,
+                                                            size: 16,
+                                                            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.5),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      GestureDetector(
+                                                        onTap: () => _confirmDelete(cat),
+                                                        child: Container(
+                                                          width: 32,
+                                                          height: 32,
+                                                          decoration: BoxDecoration(
+                                                            color: boxCount > 0
+                                                                ? Theme.of(context).dividerColor.withOpacity(0.05)
+                                                                : AppColors.red.withOpacity(0.1),
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                          child: Icon(
+                                                            Icons.delete_outline_rounded,
+                                                            size: 16,
+                                                            color: boxCount > 0
+                                                                ? Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.3)
+                                                                : Colors.redAccent,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ],
@@ -1041,6 +1165,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                       );
                                     },
                                   ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ],
                             ),
                           ),

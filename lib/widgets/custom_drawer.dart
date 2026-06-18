@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -53,6 +54,7 @@ class _CustomDrawerState extends State<CustomDrawer>
   final DatabaseReference _sensorRef = FirebaseDatabase.instance.ref(
     'device/sensor_live',
   );
+  StreamSubscription? _sensorSub;
 
   @override
   void initState() {
@@ -75,7 +77,7 @@ class _CustomDrawerState extends State<CustomDrawer>
   }
 
   void _listenToFirebaseSensors() {
-    _sensorRef.onValue.listen((DatabaseEvent event) {
+    _sensorSub = _sensorRef.onValue.listen((DatabaseEvent event) {
       if (event.snapshot.value != null) {
         final data = Map<dynamic, dynamic>.from(event.snapshot.value as Map);
         if (mounted) {
@@ -114,6 +116,7 @@ class _CustomDrawerState extends State<CustomDrawer>
 
   @override
   void dispose() {
+    _sensorSub?.cancel();
     _entranceController.dispose();
     _pulseController.dispose();
     super.dispose();

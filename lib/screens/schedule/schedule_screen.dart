@@ -116,7 +116,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   bool get isScheduleActive => isAnyScheduleRunning;
 
   bool get isAnyScheduleRunning {
-    final now = DateTime.now().toUtc().add(const Duration(hours: 7));
+    final now = DateTime.now();
     final weekday = now.weekday % 7;
     if (_categories.isEmpty) return false;
     final selectedCategoryId = _categories[_selectedCategoryIndex].id;
@@ -191,7 +191,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
   Future<void> _checkAndActivateSchedule() async {
     if (!mounted || _categories.isEmpty) return;
-    final now = DateTime.now().toUtc().add(const Duration(hours: 7));
+    final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekday = now.weekday % 7;
     final selectedCategoryId = _categories[_selectedCategoryIndex].id;
@@ -262,15 +262,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   void _updateTime() {
-    _currentTime = DateFormat(
-      'HH:mm:ss',
-    ).format(DateTime.now().toUtc().add(const Duration(hours: 7)));
+    _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
-        _currentTime = DateFormat(
-          'HH:mm:ss',
-        ).format(DateTime.now().toUtc().add(const Duration(hours: 7)));
+        _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
       });
     });
   }

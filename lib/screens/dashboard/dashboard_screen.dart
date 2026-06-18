@@ -22,8 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   late final AnimationController _appearanceController;
   late final AnimationController _chartController;
   Timer? _clockTimer;
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 1));
-  DateTime _endDate = DateTime.now();
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -40,12 +39,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     )..forward();
   }
 
-  Future<void> _showDateRangePicker() async {
-    final DateTimeRange? picked = await showDateRangePicker(
+  Future<void> _showDatePicker() async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      initialDate: _selectedDate,
       firstDate: DateTime(2023),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       builder: (context, child) {
         return child!;
       },
@@ -53,10 +52,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (picked != null) {
       setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
+        _selectedDate = picked;
       });
-      // Optionally trigger data refresh if needed
     }
   }
 
@@ -69,15 +66,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _updateTime() {
-    _currentTime = DateFormat(
-      'HH:mm:ss',
-    ).format(DateTime.now().toUtc().add(const Duration(hours: 7)));
+    _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
-        _currentTime = DateFormat(
-          'HH:mm:ss',
-        ).format(DateTime.now().toUtc().add(const Duration(hours: 7)));
+        _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
       });
     });
   }
@@ -218,51 +211,54 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "HydroGrow",
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      color:
-                          Theme.of(context).textTheme.headlineLarge?.color ??
-                          AppColors.ink,
-                      letterSpacing: -1.0,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "HydroGrow",
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color:
+                            Theme.of(context).textTheme.headlineLarge?.color ??
+                            AppColors.ink,
+                        letterSpacing: -1.0,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.4),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.4),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "LIVE MONITORING",
-                        style: TextStyle(
-                          color: AppColors.inkSoft,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
+                        const SizedBox(width: 8),
+                        Text(
+                          "LIVE MONITORING",
+                          style: TextStyle(
+                            color: AppColors.inkSoft,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -577,11 +573,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildAnalyticsChart(SensorProvider provider) {
-    // Filter using provider (now correctly supports date range)
+    // Filter by selected single date
     final chartData = provider.getFilteredByPlant(
       _selectedPlantType,
-      startDate: _startDate,
-      endDate: _endDate,
+      startDate: _selectedDate,
+      endDate: _selectedDate,
     );
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -611,35 +607,39 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "System Analytics",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color:
-                          Theme.of(context).textTheme.headlineMedium?.color ??
-                          Color(0xFF1A202C),
-                      letterSpacing: -0.5,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "System Analytics",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color:
+                            Theme.of(context).textTheme.headlineMedium?.color ??
+                            Color(0xFF1A202C),
+                        letterSpacing: -0.5,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "TIME-BASED TREND",
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFA0AEC0),
-                      letterSpacing: 1.2,
+                    const SizedBox(height: 4),
+                    Text(
+                      "TIME-BASED TREND",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFA0AEC0),
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              // Functional Date Range Indicator
+              const SizedBox(width: 8),
+              // Functional Date Indicator
               GestureDetector(
-                onTap: _showDateRangePicker,
+                onTap: _showDatePicker,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -669,27 +669,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        DateFormat('dd MMM').format(_startDate).toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: isDark
-                              ? AppColors.inkMidDark
-                              : Color(0xFF4A5568),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          "-",
-                          style: TextStyle(
-                            color: isDark ? Colors.white24 : Color(0xFFCBD5E0),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        DateFormat('dd MMM').format(_endDate).toUpperCase(),
+                        DateFormat('dd MMM yyyy').format(_selectedDate).toUpperCase(),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -718,7 +698,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               padding: const EdgeInsets.only(top: 12),
               child: Center(
                 child: Text(
-                  'No records found in this range',
+                  'No records found for this date',
                   style: TextStyle(
                     color: Color(0xFF94A3B8),
                     fontSize: 12,

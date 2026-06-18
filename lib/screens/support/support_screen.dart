@@ -79,44 +79,112 @@ class _SupportPageState extends State<SupportPage> with SingleTickerProviderStat
   }
 
   void _startCooldown() {
-    setState(() => cooldownTime = 10);
+    _cooldownTimer?.cancel();
+    setState(() => cooldownTime = 5);
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (cooldownTime == 0) {
+      if (!mounted) {
         timer.cancel();
+        return;
+      }
+      if (timer.tick >= 5) {
+        timer.cancel();
+        setState(() => cooldownTime = 0);
       } else {
-        setState(() => cooldownTime--);
+        setState(() => cooldownTime = 5 - timer.tick);
       }
     });
   }
 
   Future<String> _getGeminiResponse(String prompt) async {
-    final String? apiKey = dotenv.env['GEMINI_API_KEY'];
+    final String? apiKey = dotenv.env['GROQ_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('GEMINI_API_KEY tidak ditemukan di file .env');
+      throw Exception('GROQ_API_KEY tidak ditemukan di file .env');
     }
-    final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent');
+    final url = Uri.parse('https://api.groq.com/openai/v1/chat/completions');
 
     const String systemPrompt =
-        "Kamu adalah Synthesis AI, asisten pintar untuk aplikasi HydroGrow — "
-        "aplikasi monitoring dan kontrol sistem hidroponik berbasis IoT. "
-        "Jawab hanya pertanyaan yang berkaitan dengan hidroponik, pertanian, tanaman, "
-        "sensor IoT, atau fitur aplikasi HydroGrow. "
-        "PENTING: Jangan gunakan tanda bintang (**) atau format markdown apapun. "
-        "Gunakan bahasa Indonesia yang ramah. Jawaban harus berupa teks biasa.";
+        "Kamu adalah Synthesis AI, asisten pintar khusus untuk aplikasi HydroGrow. "
+        "ATURAN PENTING: Kamu HANYA boleh menjawab pertanyaan yang berkaitan dengan "
+        "proyek HydroGrow, fitur aplikasi, hardware, software, tim, dan hal-hal yang "
+        "tercantum di knowledge base berikut. Jika pertanyaan di luar topik tersebut, "
+        "jawab dengan sopan: Maaf, saya hanya bisa menjawab pertanyaan seputar HydroGrow "
+        "dan fitur-fiturnya. Jangan pernah menjawab pertanyaan di luar cakupan ini.\n\n"
+        "FORMAT: Jangan gunakan tanda bintang, hash, atau format markdown apapun. "
+        "Jawab dengan teks biasa yang ramah dalam bahasa Indonesia. Singkat dan jelas.\n\n"
+        "KNOWLEDGE BASE HYDROGROW:\n\n"
+        "PROYEK: HydroGrow Solar System X Roblox adalah sistem irigasi pintar berbasis IoT "
+        "yang mengintegrasikan ESP32, sensor lingkungan, panel surya, dashboard aplikasi, "
+        "Firebase Realtime Database, dan Digital Twin Roblox Studio untuk monitoring serta "
+        "kontrol penyiraman tanaman secara real-time.\n\n"
+        "TUJUAN: Monitoring tanaman real-time, penyiraman otomatis berdasarkan kelembapan tanah, "
+        "menghemat air melalui smart irrigation, memanfaatkan energi terbarukan panel surya, "
+        "menyediakan dashboard monitoring, dan Digital Twin Roblox.\n\n"
+        "HARDWARE: ESP32 WROOM 32 sebagai pusat kendali, Capacitive Soil Moisture Sensor "
+        "untuk kelembapan tanah, LDR untuk intensitas cahaya, INA219 Current Sensor untuk "
+        "arus dan daya, Load Cell plus HX711 untuk berat tangki air, Relay 5V untuk kontrol "
+        "pompa, Pompa Air DC, Panel Surya 5V, Baterai Li-Ion 18650.\n\n"
+        "SOFTWARE: Flutter untuk aplikasi mobile dan web, Firebase Realtime Database untuk "
+        "penyimpanan data, Roblox Studio dan Lua untuk Digital Twin, Telegram Bot untuk "
+        "notifikasi, OpenAI untuk AI assistant.\n\n"
+        "ARSITEKTUR: Sensor membaca data, ESP32 memproses, data dikirim ke Firebase, "
+        "aplikasi membaca dari Firebase untuk ditampilkan, Digital Twin Roblox tersinkronisasi.\n\n"
+        "FITUR APLIKASI:\n"
+        "1. Dashboard - Monitoring real-time semua sensor (soil moisture, light intensity, "
+        "water level, battery), grafik tren harian per jenis tanaman, indikator status sistem.\n"
+        "2. Categories - Tambah, edit, hapus kategori tanaman. Setiap kategori punya box tanaman, "
+        "jadwal aktif/nonaktif, threshold moisture min/max, dan status pompa.\n"
+        "3. Device Control - Kontrol pompa manual, pengaturan threshold kelembapan tanah, "
+        "threshold cahaya, threshold air, dan threshold baterai. Juga monitoring suhu.\n"
+        "4. Schedule - Atur jadwal penyiraman otomatis per kategori tanaman, aktifkan atau "
+        "nonaktifkan jadwal, lihat timeline jadwal yang berjalan hari ini.\n"
+        "5. Monitoring - Tabel data sensor lengkap dengan riwayat, filter berdasarkan tanggal.\n"
+        "6. Alerts - Notifikasi kelembapan rendah, air hampir habis, baterai lemah, "
+        "gangguan perangkat, dan log peringatan sistem.\n"
+        "7. Support - Chat dengan Synthesis AI untuk bertanya seputar HydroGrow.\n"
+        "8. Export Data - Export data sensor ke format CSV, PDF, atau XLSX.\n"
+        "9. Telegram Bot - Notifikasi real-time dikirim ke Telegram saat ada alert.\n\n"
+        "SENSOR YANG DIPANTAU: Soil Moisture (kelembapan tanah %), Light Intensity "
+        "(intensitas cahaya %), Water Level (level air %), Battery (daya baterai %).\n\n"
+        "DIGITAL TWIN ROBLOX: Representasi virtual sistem fisik HydroGrow yang tersinkronisasi "
+        "real-time melalui Firebase. Menampilkan kondisi tanaman, status pompa, kondisi tangki "
+        "air, kondisi lingkungan, dan status sensor.\n\n"
+        "TIM PENGEMBANG: Miftah Afreza Maulana (Project Manager, System Analyst), "
+        "Muhammad Raihan Hidayah (Hardware Engineer, Embedded System), "
+        "Satrio Brahmantyo (Fullstack Developer, Backend), "
+        "Yoga Andrian R (Roblox Developer, Digital Twin Engineer).\n\n"
+        "ANGGARAN: Total Rp 654.437 meliputi ESP32, sensor, relay, pompa, panel surya, "
+        "baterai, hosting, dan VPS.\n\n"
+        "METODE: Agile Development dengan Black Box Testing. Seluruh fitur berjalan sesuai "
+        "kebutuhan sistem.";
 
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json', 'X-goog-api-key': apiKey},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
         body: jsonEncode({
-          "system_instruction": {"parts": [{"text": systemPrompt}]},
-          "contents": [{"parts": [{"text": prompt}]}],
+          "model": "llama-3.3-70b-versatile",
+          "messages": [
+            {"role": "system", "content": systemPrompt},
+            {"role": "user", "content": prompt},
+          ],
         }),
       ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['candidates'][0]['content']['parts'][0]['text'];
+        final choices = data['choices'] as List?;
+        if (choices != null && choices.isNotEmpty) {
+          final content = choices[0]['message']?['content'] as String?;
+          if (content != null && content.isNotEmpty) {
+            return content;
+          }
+        }
+        throw Exception('Response tidak memiliki choices');
+      } else if (response.statusCode == 429) {
+        throw Exception('RATE_LIMIT');
       }
       throw Exception("Error: ${response.statusCode}");
     } catch (e) {
@@ -148,10 +216,13 @@ class _SupportPageState extends State<SupportPage> with SingleTickerProviderStat
       // Add bot response with typing effect
       _addBotResponseWithTyping(botText);
     } catch (e) {
+      final errorMsg = e.toString().contains('RATE_LIMIT')
+          ? "Batas permintaan tercapai. Synthesis AI perlu istirahat sebentar, coba lagi dalam 1-2 menit ya."
+          : "Maaf, Synthesis AI gagal merespon. Silakan coba lagi.";
       setState(() {
         messages.add({
           "isUser": false,
-          "text": "Maaf, Synthesis AI gagal merespon. Silakan coba lagi.",
+          "text": errorMsg,
         });
       });
     } finally {
@@ -162,31 +233,35 @@ class _SupportPageState extends State<SupportPage> with SingleTickerProviderStat
   }
 
   void _addBotResponseWithTyping(String fullText) {
-    // Add an empty message entry for the bot
-    final int botMsgIndex = messages.length;
+    final msgId = DateTime.now().microsecondsSinceEpoch.toString();
     setState(() {
-      messages.add({"isUser": false, "text": "", "isTyping": true});
+      messages.add({"id": msgId, "isUser": false, "text": "", "isTyping": true});
     });
 
     String displayedText = "";
     int charIndex = 0;
-    
+
     Timer.periodic(const Duration(milliseconds: 15), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final msgIndex = messages.indexWhere((m) => m["id"] == msgId);
+      if (msgIndex == -1) {
+        timer.cancel();
+        return;
+      }
       if (charIndex < fullText.length) {
         displayedText += fullText[charIndex];
         charIndex++;
-        if (mounted && botMsgIndex < messages.length) {
-          setState(() {
-            messages[botMsgIndex]["text"] = displayedText;
-          });
-          _scrollToBottom();
-        }
+        setState(() {
+          messages[msgIndex]["text"] = displayedText;
+        });
+        _scrollToBottom();
       } else {
-        if (mounted && botMsgIndex < messages.length) {
-          setState(() {
-            messages[botMsgIndex]["isTyping"] = false;
-          });
-        }
+        setState(() {
+          messages[msgIndex]["isTyping"] = false;
+        });
         timer.cancel();
       }
     });
@@ -270,14 +345,16 @@ class _SupportPageState extends State<SupportPage> with SingleTickerProviderStat
         children: [
           const Icon(Icons.smart_toy_rounded, color: AppColors.primary, size: 28),
           const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Synthesis AI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text("ONLINE ASSISTANT", style: TextStyle(color: AppColors.emerald, fontSize: 10, fontWeight: FontWeight.w800)),
-            ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Synthesis AI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis),
+                Text("ONLINE ASSISTANT", style: TextStyle(color: AppColors.emerald, fontSize: 10, fontWeight: FontWeight.w800), overflow: TextOverflow.ellipsis),
+              ],
+            ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
           TextButton.icon(
             onPressed: () {
               _chatRef.remove();

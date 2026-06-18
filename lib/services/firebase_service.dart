@@ -9,12 +9,14 @@ class FirebaseService {
 
   FirebaseService() {
     if (!kIsWeb) {
-      // Enable persistence for offline capability on mobile/desktop only.
-      FirebaseDatabase.instance.setPersistenceEnabled(true);
-      FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10000000); // 10MB
+      try {
+        FirebaseDatabase.instance.setPersistenceEnabled(true);
+        FirebaseDatabase.instance.setPersistenceCacheSizeBytes(10000000);
+      } catch (_) {
+        // Persistence already enabled or DB operations already started
+      }
     }
 
-    // Debug: Check connection
     _checkConnection();
   }
 

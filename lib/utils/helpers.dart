@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 class Helpers {
   /// Format waktu WIB (UTC+7)
   static String formatWIB(DateTime dateTime) {
-    final wib = dateTime.toUtc().add(const Duration(hours: 7));
-    return DateFormat('HH:mm:ss').format(wib);
+    return DateFormat('HH:mm:ss').format(dateTime);
   }
 
   /// Format tanggal dan waktu lengkap untuk log
@@ -15,7 +14,7 @@ class Helpers {
 
     try {
       final date = DateTime.parse(timestamp);
-      return DateFormat('dd MMM yyyy, HH:mm:ss').format(date.toUtc().add(const Duration(hours: 7)));
+      return DateFormat('dd MMM yyyy, HH:mm:ss').format(date);
     } catch (e) {
       return timestamp; // fallback jika format salah
     }
@@ -68,7 +67,7 @@ class Helpers {
 
   /// Generate nama file export (contoh: HydroGrow_Log_2026-04-20.csv)
   static String generateExportFileName(String format) {
-    final now = DateTime.now().toUtc().add(const Duration(hours: 7));
+    final now = DateTime.now();
     final dateStr = DateFormat('yyyy-MM-dd').format(now);
     return "HydroGrow_Log_$dateStr.$format";
   }

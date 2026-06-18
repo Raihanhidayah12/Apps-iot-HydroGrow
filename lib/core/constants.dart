@@ -1,5 +1,6 @@
 // lib/core/constants.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppColors {
   // Backgrounds
@@ -51,7 +52,8 @@ class AppFonts {
 
 class AppConstants {
   static const String appName = "HydroGrow";
-  static const String telegramBotToken =
-      "8689463097:AAEe4cQ8zDFytP6wqT3Kgq6zNDo18RWa7dU";
-  static const String telegramChatId = "6346972285";
+  static String get telegramBotToken =>
+      dotenv.env['TELEGRAM_BOT_TOKEN'] ?? '';
+  static String get telegramChatId =>
+      dotenv.env['TELEGRAM_CHAT_ID'] ?? '';
 }

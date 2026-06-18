@@ -19,6 +19,10 @@ class SensorProvider extends ChangeNotifier {
   bool _isLoading = true;
   List<String> _plantTypes = [];
   StreamSubscription? _plantTypesSub;
+  StreamSubscription? _sensorLiveSub;
+  StreamSubscription? _historySub;
+  StreamSubscription? _unitsSub;
+  StreamSubscription? _thresholdConfigSub;
 
   Map<dynamic, dynamic> _unitsData = {};
   Map<dynamic, dynamic> get unitsData => _unitsData;
@@ -73,7 +77,7 @@ class SensorProvider extends ChangeNotifier {
 
   void _listenToUnits() {
     print('📦 Starting units listener...');
-    _firebaseService.getUnitsStream().listen(
+    _unitsSub = _firebaseService.getUnitsStream().listen(
       (event) {
         if (event.snapshot.value != null) {
           _unitsData = Map<dynamic, dynamic>.from(event.snapshot.value as Map);
@@ -119,7 +123,7 @@ class SensorProvider extends ChangeNotifier {
   // NEW: Real-time listener for threshold config
   void _listenToThresholdConfigStream() {
     print('⚙️ Starting threshold config stream listener...');
-    _firebaseService.getThresholdConfigStream().listen(
+    _thresholdConfigSub = _firebaseService.getThresholdConfigStream().listen(
       (event) {
         print('🔄 Threshold stream event: ${event.snapshot.value}');
         if (event.snapshot.value != null) {
@@ -139,7 +143,7 @@ class SensorProvider extends ChangeNotifier {
 
   void _listenToSensorLive() {
     print('🎧 Starting sensor live listener...');
-    _firebaseService.getSensorLive().listen(
+    _sensorLiveSub = _firebaseService.getSensorLive().listen(
       (event) {
         print('📊 Sensor live event received: ${event.snapshot.value}');
         if (event.snapshot.value != null) {
@@ -161,7 +165,7 @@ class SensorProvider extends ChangeNotifier {
 
   void _listenToHistory() {
     print('📚 Starting history listener...');
-    _firebaseService.getHistory().listen(
+    _historySub = _firebaseService.getHistory().listen(
       (event) {
         print(
           '📜 History event received: ${event.snapshot.value != null ? "Has data" : "No data"}',
@@ -227,6 +231,10 @@ class SensorProvider extends ChangeNotifier {
   @override
   void dispose() {
     _plantTypesSub?.cancel();
+    _sensorLiveSub?.cancel();
+    _historySub?.cancel();
+    _unitsSub?.cancel();
+    _thresholdConfigSub?.cancel();
     super.dispose();
   }
 
@@ -473,13 +481,20 @@ class SensorProvider extends ChangeNotifier {
       if (selectedSensors.contains('battery')) {
         row.add(item.battery.toStringAsFixed(1));
       }
-      csv += '${row.join(',')}\n';
+      csv += '${row.map(_escapeCsvField).join(',')}\n';
     }
 
     // Trigger download
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     downloadFile('hydrogrow_monitoring_$timestamp.csv', csv);
     debugPrint('CSV Data generated and download triggered');
+  }
+
+  static String _escapeCsvField(String field) {
+    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
+      return '"${field.replaceAll('"', '""')}"';
+    }
+    return field;
   }
 
   // Export data to XLSX format

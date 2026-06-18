@@ -309,7 +309,7 @@ class _AlertsScreenState extends State<AlertsScreen>
               dataRowHeight: 56,
               horizontalMargin: 12,
               columnSpacing: 16,
-              headingRowColor: MaterialStateProperty.all(
+              headingRowColor: WidgetStateProperty.all(
                 Theme.of(context).brightness == Brightness.dark
                     ? Colors.white.withOpacity(0.05)
                     : AppColors.background,

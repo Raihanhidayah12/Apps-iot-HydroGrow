@@ -958,7 +958,7 @@ class _DevicePageState extends State<DevicePage> with TickerProviderStateMixin {
         .split("/")
         .last
         .toUpperCase()
-        .replaceAll('_', '_');
+        .replaceAll('_', ' ');
     final String lastSync = _formatLastSync(data['last_sync']);
 
     return AnimatedContainer(

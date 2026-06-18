@@ -587,7 +587,7 @@ class _MonitoringScreenState extends State<MonitoringScreen>
               child: DataTable(
                 headingRowHeight: 48,
                 dataRowHeight: 56,
-                headingRowColor: MaterialStateProperty.all(
+                headingRowColor: WidgetStateProperty.all(
                   Theme.of(context).brightness == Brightness.dark
                       ? Colors.white.withOpacity(0.05)
                       : Color(0xFFF7FAFC),

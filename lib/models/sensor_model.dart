@@ -81,7 +81,7 @@ class SensorData {
       // 3. Fallback to standard parse
       return DateTime.parse(time);
     } catch (e) {
-      return DateTime.now();
+      return DateTime.fromMillisecondsSinceEpoch(0);
     }
   }
 
